@@ -1,0 +1,28 @@
+{
+  "name": "flowstate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FLOWSTATE \u2014 free, read-only Solana flow monitor: anomaly scoring on public market data, published as a static website.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "tsx --test \"packages/*/src/**/*.test.ts\" \"apps/*/src/**/*.test.ts\"",
+    "demo": "tsx apps/worker/src/demo-run.ts",
+    "db:verify": "bash scripts/verify-migrations.sh",
+    "collect": "tsx apps/worker/src/collect.ts",
+    "collect:demo": "tsx apps/worker/src/collect.ts --demo",
+    "typecheck:web": "pnpm --filter @flowstate/web typecheck",
+    "web:dev": "pnpm --filter @flowstate/web dev",
+    "web:build": "pnpm --filter @flowstate/web build",
+    "web:demo-data": "FLOWSTATE_DATA_DIR=.data-demo tsx apps/worker/src/collect.ts --demo && rm -rf apps/web/public/data && cp -r .data-demo/public apps/web/public/data"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@flowstate/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Background worker: ingestion, detection, event lifecycle and alert evaluation.",
+  "scripts": {
+    "demo": "tsx src/demo-run.ts"
+  },
+  "dependencies": {
+    "@flowstate/anomaly-engine": "workspace:*",
+    "@flowstate/market-data": "workspace:*",
+    "@flowstate/shared": "workspace:*"
+  }
+}

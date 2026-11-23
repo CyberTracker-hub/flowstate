@@ -1,0 +1,14 @@
+{
+  "name": "@flowstate/market-data",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Normalized market-data model, provider adapters and deterministic demo fixtures.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@flowstate/anomaly-engine": "workspace:*",
+    "@flowstate/shared": "workspace:*"
+  }
+}
