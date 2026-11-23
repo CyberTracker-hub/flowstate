@@ -58,10 +58,9 @@ $ pnpm web:demo-data && pnpm web:build
 $ scripts/publish-data.sh         -> 11 files pushed as a single commit to a local test remote
 ```
 
-The new tests were checked against deliberate regressions: treating a missing
-5-minute volume as zero, allowing partial sums over pools, taking the price
-from the deepest instead of the most traded pool, and accepting saved state
-from a different provider each made tests fail.
+The new tests were checked against deliberate regressions: allowing partial
+sums over pools, taking the price from the deepest instead of the most traded
+pool, and accepting saved state from a different provider each made tests fail.
 
 ### Live API check (real requests, from a browser, 2026-11-23)
 
