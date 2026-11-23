@@ -7,11 +7,9 @@ unusual it is (0–100), and publishes the result as a static website.
 FLOWSTATE measures; it does not predict. It does not trade, hold keys, or
 ask for an account. Nothing in this project is financial advice.
 
-> **Status:** the engine, the live data adapter, the collector and the
-> website are built and tested. The first run on GitHub (collector schedule
-> and Pages deployment) is the remaining step. See
-> [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for exactly what has
-> and has not been verified.
+> **Live:** <https://cybertracker-hub.github.io/flowstate/>. See
+> [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for what has and has
+> not been verified.
 
 ## How it works
 

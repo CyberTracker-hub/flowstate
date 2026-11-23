@@ -7,8 +7,8 @@ inspected. The website uses exactly one external service.
 
 | Provider | Purpose | Code | Live verified |
 |---|---|---|---|
-| **DexScreener** | Market data for every token | `packages/market-data/src/dexscreener.ts` | **Yes**, from a browser (see below). Not yet from a GitHub Actions runner. |
-| GitHub Actions / Pages | Scheduler and hosting | `.github/workflows/*` | Not yet (workflows have not run) |
+| **DexScreener** | Market data for every token | `packages/market-data/src/dexscreener.ts` | **Yes**: from a browser and from GitHub Actions runners (35 of 35 tokens read). |
+| GitHub Actions / Pages | Scheduler and hosting | `.github/workflows/*` | Yes: collector, deploy and CI have run; the schedule itself not yet observed |
 | Birdeye | (parked) | `packages/market-data/src/birdeye.ts` | No. Needs a paid plan for live monitoring; not used. |
 | Helius, Jupiter, Anthropic, Stripe, Supabase, Telegram | (not used) | — | — |
 
@@ -49,10 +49,9 @@ as unsupported; never estimated.
 **Rate limits:** documented as 300 requests/minute for the pair endpoints. A
 cycle needs about 7 requests.
 
-**Open risk:** the API sits behind Cloudflare and could refuse requests from
-GitHub's shared runner addresses. This can only be confirmed by the first
-workflow run. If it happens, the collector can run from any other scheduler
-(see `docs/deployment.md`).
+**Runner access:** requests from GitHub's runners were accepted on the first
+live runs. If the provider ever refuses them, the collector can run from any
+other scheduler (see `docs/deployment.md`).
 
 **Attribution:** the website credits and links DexScreener in its footer and
 on the method page.

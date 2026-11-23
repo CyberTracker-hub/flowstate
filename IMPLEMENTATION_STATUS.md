@@ -2,11 +2,13 @@
 
 Last updated: 2026-11-23 (milestone 2).
 
-**Honest summary:** FLOWSTATE is now a free public website instead of a
-subscription app. The engine, a live data adapter for a free data source, the
-collector and the website are built and tested locally. **Nothing is online
-yet:** the GitHub workflows have never run, so the collector has not yet
-read the live API from GitHub and the site has not been deployed.
+**Honest summary:** FLOWSTATE is a free public website and it is **online**:
+<https://cybertracker-hub.github.io/flowstate/>. The collector has read the
+live DexScreener API from GitHub (35 of 35 tokens, three cycles) and the site
+shows those readings. Not yet observed: the five-minute schedule firing on its
+own, and real scores (a token is scored after 12 readings, about an hour).
+
+Repository: <https://github.com/CyberTracker-hub/flowstate> (public).
 
 ## 0. Direction change in milestone 2 (owner's decision)
 
@@ -34,7 +36,7 @@ Verified = implemented, type-checked, and covered by tests that were run.
 | **Public data format** shared by collector and website | `packages/shared/src/public-data.ts` | used by both, type-checked |
 | **JSON state store** (replaces the database): bounded, provider-safe | `apps/worker/src/json-store.ts` | tests |
 | **Collector**: live cycle, publisher, CLI, synthetic preview mode | `apps/worker/src/{live,publish,collect}.ts` | 13 tests (live cycles on a DexScreener-shaped API, state store, publisher) |
-| **Monitored tokens**: 35 mints | `config/tokens.json` | every mint resolved on the live API on 2026-11-23 |
+| **Monitored tokens**: 35 mints | `config/tokens.json` | all 35 read successfully in the live runs |
 | **Website**: Now, Tokens, Token, Events, How it works | `apps/web` | type-checked, static build, viewed at desktop and phone width, light and dark |
 | **Data-branch publishing** (one commit, replaced each run) | `scripts/publish-data.sh` | run against a local remote; round trip byte-identical |
 | Demo fixtures, always labelled synthetic | `packages/market-data/src/demo.ts` | tests; website shows a "Demo data" banner |
@@ -64,32 +66,46 @@ from a different provider each made tests fail.
 ### Live API check (real requests, from a browser, 2026-11-23)
 
 - `GET /token-pairs/v1/solana/{mint}` for 52 candidate mints: all returned 200.
+- 300 real pools checked for how zero volume is encoded (omitted, never 0).
 - `GET /latest/dex/pairs/solana/{…}`: 200, `{ schemaVersion, pairs }`.
 - Response shapes, the absent-`volume.m5` behaviour, stale prices on idle
   pools and the one-pool limitation of `/tokens/v1` are recorded in
   `docs/integrations.md`. 17 candidates were dropped for thin liquidity or
   volume; 35 remain.
 
-## 2. Implemented but NOT verified in its real environment
+### First live run on GitHub (2026-11-23, 20:20–20:26 UTC)
 
-| Item | Why unverified |
+```text
+CI                    -> success (typecheck, 166 tests, demo run, site build)
+Collect market data   -> success x3 (manual starts)
+     cycle 1: 35/35 tokens read, 39 requests (pool selection + first reading)
+     cycle 2: same 5-minute bucket -> nothing duplicated (idempotent)
+     cycle 3: 35/35 tokens read, 4 requests, 2 readings per token
+     data branch: exactly 1 commit after 3 runs
+Deploy website        -> first run failed (Pages was not enabled yet), then success
+Site                  -> home page and a token page loaded the real JSON
+```
+
+The first cycle exposed one wrong assumption: two tokens had an unknown
+5-minute volume although their pools reported trades. A check of 300 real
+pools showed DexScreener omits any volume window that rounds to $0.00. The
+adapter was corrected (an omitted window is zero when the `volume` object is
+present); after the fix no token had an unknown volume.
+
+## 2. Not yet observed
+
+| Item | Status |
 |---|---|
-| Collector against the live API | The build environment could not reach `api.dexscreener.com` from its shell. The adapter is tested on captured real responses and on a stand-in API, but `pnpm collect` has never completed a real cycle. |
-| `collect.yml`, `pages.yml`, `ci.yml` | Never executed: the repository is not on GitHub yet. |
-| DexScreener from GitHub runners | Unknown whether Cloudflare accepts requests from GitHub's runner addresses. |
-| Website reading `raw.githubusercontent.com` | The site was only viewed with local demo data. |
-| Scoring on real markets | Thresholds are reasoned defaults; no real anomaly has been observed yet. |
+| The schedule firing by itself | All runs so far were started manually. GitHub usually starts a new schedule within the hour and runs it late under load. |
+| Real scores and events | Needs 12 readings per token (about an hour), a day for full baselines. |
+| Behaviour over days | Rate limits, skipped runs and threshold quality can only be judged with time. |
 
-## 3. Not started / next steps, in order
+## 3. Next steps
 
-1. **Create the GitHub repository and push** (needs the owner: see section 5).
-2. Enable Pages (source: GitHub Actions) and read/write workflow permissions.
-3. Run "Collect market data" once; confirm a real cycle: all 35 tokens read,
-   `data` branch created.
-4. Run "Deploy website"; open the site and confirm it loads the real JSON.
-5. After about an hour: confirm tokens are being scored. After a day: review
-   real scores and events and adjust thresholds if they are too noisy or too quiet.
-6. Optional later: custom domain; a second data source for cross-checking
+1. Confirm scheduled runs appear in the Actions tab and tokens get scored.
+2. After a day: review real scores and events; adjust thresholds if they are
+   too noisy or too quiet.
+3. Optional later: custom domain; a second data source for cross-checking
    prices; a public Telegram channel for events; token discovery beyond the
    fixed list.
 
@@ -99,9 +115,7 @@ None.
 
 ## 5. What is needed from the owner
 
-- **A GitHub repository** to push to (public, e.g. `flowstate`). The build
-  session cannot create one.
-- No API keys, no payments, no other accounts.
+Nothing. No API keys, no payments, no other accounts.
 
 ## 6. Decisions and assumptions to confirm
 
