@@ -103,6 +103,10 @@ minutes for 5 h 20 min and starts its successor; the schedule remains as a
 safety net. `scripts/collect-loop.sh` was tested locally for normal rounds, a
 failing round among good ones, and a loop in which every round fails.
 
+Observed on GitHub after the change: readings at 21:52:56, 21:55:31 and
+22:00:32 UTC from one run (35 of 35 tokens each), and a second start while
+the loop was running exited in 7 seconds without doing anything.
+
 ## 2. Not yet observed
 
 | Item | Status |
@@ -147,8 +151,9 @@ Nothing. No API keys, no payments, no other accounts.
 ## 7. Known limitations
 
 - Prices, volumes and liquidity are live (30-second refresh in the browser).
-  **Scores and events are not**: they are typically 5–15 minutes behind the
-  market (schedule delays plus about five minutes of CDN caching).
+  **Scores and events are not**: a reading is taken every five minutes and the
+  published files are cached for about five more, so they are up to about ten
+  minutes behind the market.
 - Activity in pools outside the pinned set is not counted.
 - The large-transaction signal is off (no per-trade data), so the best
   possible signal coverage is 85 %. Buyer activity counts buys, not wallets.
