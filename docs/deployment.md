@@ -4,7 +4,7 @@ FLOWSTATE runs entirely on a public GitHub repository. There is no server,
 no database, no account system and no API key.
 
 ```text
-                    every ~5 min                       on push to main
+                    every 5 min                        on push to main
           ┌──────────────────────────────┐      ┌──────────────────────────┐
           │ workflow: Collect market data │      │ workflow: Deploy website │
           │  restore state  (data branch) │      │  next build (static)     │
@@ -25,8 +25,8 @@ DexScreener ─► pnpm collect               │      │  upload + deploy Page
 2. Settings → Pages → Build and deployment → Source: **GitHub Actions**.
 3. Settings → Actions → General → Workflow permissions: **Read and write**
    (the collector pushes the `data` branch).
-4. Actions → "Collect market data" → Run workflow, once, to create the `data`
-   branch immediately instead of waiting for the first scheduled run.
+4. Actions → "Collect market data" → Run workflow, once. This starts the
+   collection loop; from then on it keeps itself running.
 5. Actions → "Deploy website" → Run workflow (it also runs on every push to
    `main` that touches the site).
 
@@ -38,7 +38,7 @@ after a day.
 
 | Piece | Where | Command |
 |---|---|---|
-| Collector | `.github/workflows/collect.yml` | `pnpm collect` |
+| Collector | `.github/workflows/collect.yml` | `scripts/collect-loop.sh` → `pnpm collect` every 5 min |
 | Data publishing | `scripts/publish-data.sh` | replaces the `data` branch with one commit |
 | Website | `.github/workflows/pages.yml` | `pnpm --filter @flowstate/web build` |
 | Checks | `.github/workflows/ci.yml` | typecheck, tests, demo run, site build |
@@ -67,10 +67,20 @@ To preview the site on real readings, run `pnpm collect` a few times and copy
 
 ## Things to know
 
-- **Scheduled runs are best-effort.** GitHub delays them under load and can
-  skip one. The engine works on "the last N readings", so irregular spacing
-  lowers the data-confidence indicator rather than breaking scores, and the
-  website prints the age of its data.
+- **The collector is a loop, not a five-minute schedule.** GitHub starts
+  scheduled workflows far less often than asked (observed here: about once an
+  hour for a five-minute cron line). So one run of "Collect market data" stays
+  alive for 5 h 20 min, takes a reading every five minutes
+  (`scripts/collect-loop.sh`), and starts its successor when it ends. The
+  half-hourly schedule is only a safety net that starts a new loop if the
+  chain breaks; a scheduled run that finds a loop running exits immediately.
+- **This keeps one GitHub runner busy around the clock.** It is free on a
+  public repository, but it is heavier use than GitHub intends for Actions.
+  If GitHub ever throttles or disables Actions for the organisation, move the
+  collector to another scheduler (see "If you outgrow this"); nothing else
+  changes.
+- **Stopping it:** Actions → Collect market data → cancel the running run, then
+  "Disable workflow" (otherwise the safety net starts a new loop).
 - **GitHub pauses schedules in inactive repositories.** After 60 days without
   repository activity GitHub disables scheduled workflows and e-mails the
   owner; re-enable from the Actions tab.

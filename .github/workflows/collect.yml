@@ -1,61 +1,78 @@
 # Reads the market every five minutes and publishes the result to the `data`
 # branch, where the website fetches it. Free on a public repository.
 #
-# GitHub starts scheduled runs late when it is busy and sometimes skips one,
-# so readings are typically 5-15 minutes apart. The website shows the age of
-# its data and says so when the collector is late.
+# Why a loop: GitHub starts scheduled workflows far less often than the cron
+# line asks (observed here: about once an hour for a five-minute schedule).
+# One run therefore stays alive for a little over five hours, takes a reading
+# every five minutes, and starts its successor when it ends.
+#
+# The schedule below is only a safety net: if the chain ever breaks (a runner
+# dies, GitHub has an outage), the next scheduled run starts a new loop. A
+# scheduled run that finds a loop already running exits at once.
 name: Collect market data
 
 on:
   schedule:
-    - cron: "2-59/5 * * * *"
+    - cron: "11,41 * * * *"
   workflow_dispatch:
+    inputs:
+      handover:
+        description: "Started by the previous loop as its successor (skips the already-running check)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
-
-concurrency:
-  group: collect
-  cancel-in-progress: false
+  actions: write
 
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    # GitHub ends a job after 6 hours; the loop stops itself well before that.
+    timeout-minutes: 345
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Is a loop already running?
+        id: guard
+        run: |
+          if [ "${{ inputs.handover }}" = "true" ]; then
+            echo "successor of the previous loop: taking over"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Another run of this workflow that started before this one and is still alive.
+          older="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/collect.yml/runs?per_page=30" \
+            --jq "[.workflow_runs[] | select((.status == \"in_progress\" or .status == \"queued\") and .id < $GITHUB_RUN_ID)] | length")"
+          if [ "$older" -gt 0 ]; then
+            echo "a loop is already running ($older older active run); nothing to do"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.guard.outputs.run == 'true'
 
       - uses: pnpm/action-setup@v4
+        if: steps.guard.outputs.run == 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.guard.outputs.run == 'true'
         with:
           node-version: 22
           cache: pnpm
 
       - name: Install dependencies
+        if: steps.guard.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
 
-      - name: Restore the previous state from the data branch
-        run: |
-          mkdir -p .data
-          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
-            git fetch --quiet --depth=1 origin data
-            git archive FETCH_HEAD | tar -x -C .data
-            echo "restored state from the data branch"
-          else
-            echo "no data branch yet: this is the first run"
-          fi
+      - name: Read the market every five minutes
+        if: steps.guard.outputs.run == 'true'
+        # 5 h 20 min of readings, then hand over.
+        run: scripts/collect-loop.sh 19200 .data data origin
 
-      - name: Read the market and score it
-        run: pnpm collect
-        env:
-          FLOWSTATE_DATA_DIR: .data
-
-      - name: Publish to the data branch
-        if: always()
-        run: |
-          if [ -f .data/state.json ]; then
-            scripts/publish-data.sh .data data origin
-          else
-            echo "nothing was produced; the data branch is left as it was"
-          fi
+      - name: Start the next loop
+        # Also after a failed loop, so one bad stretch does not end collection.
+        if: always() && steps.guard.outputs.run == 'true'
+        run: gh workflow run collect.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f handover=true

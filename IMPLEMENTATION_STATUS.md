@@ -5,8 +5,9 @@ Last updated: 2026-11-23 (milestone 2).
 **Honest summary:** FLOWSTATE is a free public website and it is **online**:
 <https://cybertracker-hub.github.io/flowstate/>. The collector has read the
 live DexScreener API from GitHub (35 of 35 tokens, three cycles) and the site
-shows those readings. Not yet observed: the five-minute schedule firing on its
-own, and real scores (a token is scored after 12 readings, about an hour).
+shows those readings. Collection runs as a self-renewing loop on GitHub
+Actions, one reading every five minutes. Not yet observed: real scores (a
+token is scored after 12 readings) and the loop handing over to its successor.
 
 Repository: <https://github.com/CyberTracker-hub/flowstate> (public).
 
@@ -92,17 +93,28 @@ pools showed DexScreener omits any volume window that rounds to $0.00. The
 adapter was corrected (an omitted window is zero when the `volume` object is
 present); after the fix no token had an unknown volume.
 
+### The schedule did not deliver (2026-11-23, 20:20–21:48 UTC)
+
+In 90 minutes GitHub started the five-minute schedule **once**. Tokens had 5
+of the 12 readings needed for a score. A cron-per-reading design cannot work
+on GitHub, so the collector became a self-renewing loop (owner's choice,
+knowing it keeps a runner busy around the clock): one run reads every five
+minutes for 5 h 20 min and starts its successor; the schedule remains as a
+safety net. `scripts/collect-loop.sh` was tested locally for normal rounds, a
+failing round among good ones, and a loop in which every round fails.
+
 ## 2. Not yet observed
 
 | Item | Status |
 |---|---|
-| The schedule firing by itself | All runs so far were started manually. GitHub usually starts a new schedule within the hour and runs it late under load. |
+| A loop handing over to its successor | First handover is due about 5 h 20 min after the loop started. |
 | Real scores and events | Needs 12 readings per token (about an hour), a day for full baselines. |
-| Behaviour over days | Rate limits, skipped runs and threshold quality can only be judged with time. |
+| Behaviour over days | Rate limits, GitHub's tolerance of the loop, and threshold quality can only be judged with time. |
 
 ## 3. Next steps
 
-1. Confirm scheduled runs appear in the Actions tab and tokens get scored.
+1. Confirm tokens get scored (about an hour after the loop started) and that
+   the first handover works.
 2. After a day: review real scores and events; adjust thresholds if they are
    too noisy or too quiet.
 3. Optional later: custom domain; a second data source for cross-checking
@@ -144,6 +156,8 @@ Nothing. No API keys, no payments, no other accounts.
   buy/sell signal then reports "too few trades" instead of a value.
 - Scoring thresholds have not been tuned on real data, and nothing here
   predicts price.
+- The collector keeps a GitHub runner busy around the clock. Free on a public
+  repository, but heavier than GitHub intends; they could throttle it.
 - GitHub pauses scheduled workflows after 60 days without repository activity.
 - No legal or regulatory review has been done.
 
