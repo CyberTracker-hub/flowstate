@@ -56,6 +56,12 @@ export interface PublicToken {
   spark: Array<number | null>;
   openEventId: string | null;
   poolCount: number;
+  /**
+   * Addresses of the pools the figures are summed over, deepest first. The
+   * website uses them to refresh prices and volumes directly from the data
+   * source between collector runs. Absent in files written before this field.
+   */
+  pools?: string[];
 }
 
 export interface PublicEvidence {

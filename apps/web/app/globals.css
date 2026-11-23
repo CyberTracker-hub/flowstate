@@ -220,6 +220,24 @@ input {
   font-weight: 600;
 }
 
+/* "Live" is a state, so it uses the reserved state colour and always sits next to the word. */
+.live-mark {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--good);
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+
+.live-tag {
+  margin-left: 8px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
 .banner {
   background: var(--warn-bg);
   color: var(--warn-ink);

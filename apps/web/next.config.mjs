@@ -11,7 +11,7 @@ const nextConfig = {
   basePath,
   images: { unoptimized: true },
   reactStrictMode: true,
-  transpilePackages: ["@flowstate/shared", "@flowstate/anomaly-engine"],
+  transpilePackages: ["@flowstate/shared", "@flowstate/anomaly-engine", "@flowstate/market-data"],
 };
 
 export default nextConfig;

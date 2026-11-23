@@ -155,6 +155,7 @@ describe("live cycle against a DexScreener-shaped API", () => {
     assert.equal(sol.buys5m, 82);
     assert.equal(sol.change.h24, 3.3);
     assert.equal(sol.poolCount, 2);
+    assert.deepEqual(sol.pools, [POOL_A, POOL_B]); // lets the website refresh these pools itself
     assert.equal(sol.samples, 1);
     assert.equal(sol.status, "insufficient_data");
     assert.equal(sol.score, null);

@@ -148,6 +148,7 @@ export function buildPublicData(input: PublishInput): PublicData {
       spark: rows.slice(-sparkLength).map((r) => r.sc ?? null),
       openEventId: openByMint.get(mint) ?? null,
       poolCount: ctx?.pools.length ?? 0,
+      pools: store.pins.get(mint)?.pools ?? [],
     };
     tokens.push(token);
 

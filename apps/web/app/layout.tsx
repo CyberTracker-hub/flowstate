@@ -2,6 +2,7 @@ import "@fontsource-variable/archivo/wdth.css";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { LiveProvider } from "@/components/live";
 import { OverviewProvider } from "@/components/overview";
 import { Shell } from "@/components/shell";
 
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body>
         <OverviewProvider>
-          <Shell>{children}</Shell>
+          <LiveProvider>
+            <Shell>{children}</Shell>
+          </LiveProvider>
         </OverviewProvider>
       </body>
     </html>

@@ -10,6 +10,7 @@ import { CONFIDENCE_LABEL, clockTime, timeAgo } from "@/lib/format";
 import { Change, Gauge, Logo, SeverityTag } from "../bits";
 import { EventRow } from "../event-row";
 import { FactorList } from "../factors";
+import { useLive, withLive } from "../live";
 import { useOverview } from "../overview";
 import { TimeCharts } from "../time-charts";
 
@@ -41,6 +42,7 @@ export function TokenPage() {
   const { data: overview } = useOverview();
   const { data, error, loading } = useJson<PublicTokenDetail>(mint ? `tokens/${mint}.json` : null);
   const now = useNow();
+  const live = useLive();
 
   const back = (
     <Link href="/tokens/" className="back">
@@ -68,7 +70,10 @@ export function TokenPage() {
     );
   }
 
-  const { token, detection } = data;
+  const { detection } = data;
+  // Market figures are overlaid with the live reading; the score below keeps its own reading time.
+  const token = withLive(data.token, live, now);
+  const isLive = token !== data.token;
   const engine = overview.engine;
   const stale = token.observedAt !== null && token.observedAt < data.generatedAt - engine.staleAfterMs;
 
@@ -97,7 +102,15 @@ export function TokenPage() {
 
       <div className="figures">
         <div className="figure">
-          <div className="figure-label">Price</div>
+          <div className="figure-label">
+            Price
+            {isLive && (
+              <span className="live-tag">
+                <span className="live-mark" aria-hidden="true" />
+                live
+              </span>
+            )}
+          </div>
           <div className="figure-value num">{formatPriceUsd(token.priceUsd)}</div>
           <div className="figure-note">
             {token.change.h24 === null ? "24 h change not reported" : (

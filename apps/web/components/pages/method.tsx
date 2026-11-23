@@ -151,8 +151,10 @@ export function MethodPage() {
             in buys, not people. The thresholds are reasoned starting values and have not been tuned against outcomes.
           </p>
           <p>
-            The collector runs on a schedule and is sometimes late or skipped. Readings are therefore usually 5 to 15 minutes
-            apart, and this page can be several minutes behind the market.
+            Two clocks run on this site. Prices, volumes, trade counts and liquidity are fetched by your browser straight from
+            DexScreener and refresh every 30 seconds. Scores and events come from a collector that runs on a schedule and is
+            sometimes late or skipped, so score readings are usually 5 to 15 minutes apart. Every score shows the time of its
+            reading.
           </p>
         </div>
       </section>

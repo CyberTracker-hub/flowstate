@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useNow } from "@/lib/data";
 import { clockTime, duration, timeAgo } from "@/lib/format";
+import { useLive } from "./live";
 import { useOverview } from "./overview";
 
 const NAV = [
@@ -26,7 +27,9 @@ function isCurrent(pathname: string, href: string): boolean {
 
 function Status() {
   const { data, error, loading } = useOverview();
-  const now = useNow();
+  const live = useLive();
+  // A faster clock here so "updated 12 s ago" keeps moving.
+  const now = useNow(5_000);
   if (loading) return <div className="status">Loading the latest readings…</div>;
   if (!data) {
     return (
@@ -38,14 +41,30 @@ function Status() {
     );
   }
   const { health } = data;
+  const liveAge = live.at === null || now === null ? null : Math.max(0, Math.round((now - live.at) / 1000));
   return (
     <div className="status">
+      {live.status !== "off" && (
+        <>
+          {liveAge !== null && liveAge <= 180 ? (
+            <>
+              <span className="live-mark" aria-hidden="true" />
+              <strong>Prices live</strong> <span>updated {liveAge < 5 ? "just now" : `${liveAge} s ago`}</span>
+            </>
+          ) : live.status === "failed" ? (
+            <span>Live prices are not reachable; showing the last reading</span>
+          ) : (
+            <span>Connecting to live prices…</span>
+          )}
+          <br />
+        </>
+      )}
       <strong>
-        {health.tokensOk} of {health.tokensRequested} tokens read
+        Scores: {health.tokensOk} of {health.tokensRequested} tokens read
       </strong>{" "}
       {now !== null && <span>{timeAgo(data.generatedAt, now)}</span>}
       <br />
-      {data.source.name}, every {duration(data.source.intervalMs)}
+      {data.source.name}, scored every {duration(data.source.intervalMs)}
       {now !== null && <span className="hide-sm"> (last at {clockTime(data.generatedAt)})</span>}
     </div>
   );
