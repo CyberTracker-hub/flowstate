@@ -74,10 +74,12 @@ To preview the site on real readings, run `pnpm collect` a few times and copy
 - **GitHub pauses schedules in inactive repositories.** After 60 days without
   repository activity GitHub disables scheduled workflows and e-mails the
   owner; re-enable from the Actions tab.
-- **The website reads the data branch through `raw.githubusercontent.com`**,
-  which caches files for about five minutes. Together with the schedule, the
-  page is typically 5–15 minutes behind the market. This is a monitor, not a
-  trading terminal.
+- **Two clocks.** Prices, volumes, trades and liquidity are refreshed every
+  30 seconds by the visitor's browser, straight from DexScreener (4 requests
+  per refresh, paused while the tab is hidden). Scores and events come from
+  the data branch through `raw.githubusercontent.com`, which caches files for
+  about five minutes; together with the schedule they are typically 5–15
+  minutes behind the market.
 - **Rate limits.** A cycle makes about 7 requests (35 tokens); pool selection
   adds one request per token every six hours. DexScreener allows 300 requests
   a minute on these endpoints.

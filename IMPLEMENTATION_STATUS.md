@@ -38,6 +38,7 @@ Verified = implemented, type-checked, and covered by tests that were run.
 | **Collector**: live cycle, publisher, CLI, synthetic preview mode | `apps/worker/src/{live,publish,collect}.ts` | 13 tests (live cycles on a DexScreener-shaped API, state store, publisher) |
 | **Monitored tokens**: 35 mints | `config/tokens.json` | all 35 read successfully in the live runs |
 | **Website**: Now, Tokens, Token, Events, How it works | `apps/web` | type-checked, static build, viewed at desktop and phone width, light and dark |
+| **Live market figures**: the browser refreshes price, volume, trades and liquidity from DexScreener every 30 s, using the collector's own aggregation code | `apps/web/components/live.tsx` | observed on the deployed site: 4 requests per refresh, figures changed between refreshes |
 | **Data-branch publishing** (one commit, replaced each run) | `scripts/publish-data.sh` | run against a local remote; round trip byte-identical |
 | Demo fixtures, always labelled synthetic | `packages/market-data/src/demo.ts` | tests; website shows a "Demo data" banner |
 | Retry/backoff, circuit breaker, number formatting, logging | `packages/shared`, `apps/worker` | tests |
@@ -133,8 +134,9 @@ Nothing. No API keys, no payments, no other accounts.
 
 ## 7. Known limitations
 
-- The page is typically 5–15 minutes behind the market (schedule delays plus
-  about five minutes of CDN caching). It is a monitor, not a trading terminal.
+- Prices, volumes and liquidity are live (30-second refresh in the browser).
+  **Scores and events are not**: they are typically 5–15 minutes behind the
+  market (schedule delays plus about five minutes of CDN caching).
 - Activity in pools outside the pinned set is not counted.
 - The large-transaction signal is off (no per-trade data), so the best
   possible signal coverage is 85 %. Buyer activity counts buys, not wallets.
