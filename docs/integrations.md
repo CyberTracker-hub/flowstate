@@ -29,9 +29,11 @@ Both answered `200` with `cache-control: public, max-age=30` and
 **What the real responses showed (2026-11-23)**
 
 - `priceUsd` and `priceNative` are strings; all other figures are numbers.
-- `volume.m5` is **absent**, not 0, for a pool with no trade in the last five
-  minutes, while `txns.m5` is `{ buys: 0, sells: 0 }`. The adapter reads that
-  exact combination as zero volume and everything else as unknown.
+- A volume window that rounds to $0.00 is **omitted**, never sent as 0.
+  Checked on 300 real pools: no window was ever present with value 0, the
+  smallest present value was 0.01, and every window without trades was
+  absent. The adapter therefore reads an omitted window as zero when the
+  `volume` object is present, and as unknown when the object itself is missing.
 - `marketCap`/`fdv` are absent for some pools (e.g. SOL), `liquidity` for a few.
 - `GET /tokens/v1/solana/{mints}` returns ONE pool per token, and often not a
   representative one (seen: a $14K pool for a token with $5M of liquidity

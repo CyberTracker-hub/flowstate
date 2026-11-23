@@ -52,8 +52,9 @@ function fakeDexScreener() {
     priceNative: String(p.price),
     priceUsd: String(p.price),
     txns: { m5: { buys: p.buys, sells: p.sells }, h1: { buys: p.buys * 12, sells: p.sells * 12 } },
-    // Verified behaviour: volume.m5 is absent when nothing traded.
-    volume: p.volume > 0 ? { m5: p.volume, h1: p.volume * 12, h24: p.volume * 288 } : { h24: 1000 },
+    // Verified behaviour: a window that rounds to $0.00 is omitted. A negative
+    // spec value stands for "no volume object at all".
+    ...(p.volume < 0 ? {} : { volume: p.volume > 0 ? { m5: p.volume, h1: p.volume * 12, h24: p.volume * 288 } : { h24: 1000 } }),
     priceChange: { m5: 0.1, h1: -0.4, h6: 1.2, h24: 3.3 },
     liquidity: { usd: p.liquidity },
     marketCap: p.price * 1e9,
@@ -261,16 +262,18 @@ describe("live cycle against a DexScreener-shaped API", () => {
     assert.equal(jup?.samples, 0);
   });
 
-  it("treats an idle pool as zero volume but an unknown figure as unknown", async () => {
+  it("treats an omitted volume window as zero but a missing volume object as unknown", async () => {
     const h = harness();
     const jup = h.api.world.pools[2];
     assert.ok(jup);
     Object.assign(jup, { volume: 0, buys: 0, sells: 0 });
     const idle = await h.step();
     assert.equal(idle.data.overview.tokens.find((t) => t.mint === JUP)?.volume5mUsd, 0);
-    Object.assign(jup, { volume: 0, buys: 3, sells: 1 }); // trades but no volume figure
+    Object.assign(jup, { volume: -1, buys: 3, sells: 1 }); // no volume object in the response
     const unknown = await h.step();
-    assert.equal(unknown.data.overview.tokens.find((t) => t.mint === JUP)?.volume5mUsd, null);
+    const token = unknown.data.overview.tokens.find((t) => t.mint === JUP);
+    assert.equal(token?.volume5mUsd, null);
+    assert.equal(token?.buys5m, 3);
   });
 
   it("starts from empty instead of mixing sources when the saved state is from another provider", async () => {

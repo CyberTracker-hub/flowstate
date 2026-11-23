@@ -23,8 +23,12 @@ import {
  *   GET /latest/dex/pairs/solana/{a,b,...}       -> { schemaVersion, pairs: [...] }, up to 30 pools
  *   - both answer with `cache-control: public, max-age=30` and CORS `*`
  *   - `priceUsd` / `priceNative` are STRINGS; everything else numeric
- *   - `volume.m5` is ABSENT (not 0) when the pool had no trade in the last
- *     5 minutes, while `txns.m5` is present as { buys: 0, sells: 0 }
+ *   - a volume window that rounds to $0.00 is OMITTED from `volume`, never
+ *     sent as 0. Checked on 300 real pools: no window was ever present with
+ *     value 0, the smallest present value was 0.01, every window without
+ *     trades was absent (182 of 182 for m5), and the rare window with trades
+ *     but no figure (2 of 118) sat next to dust-sized neighbours (e.g. $0.08
+ *     across three trades in the hour). So "absent" means "under half a cent".
  *   - `marketCap` / `fdv` and `liquidity` are absent for some pools
  *   - pools of the same token can quote clearly different prices: an idle
  *     pool keeps its last price (seen: 0.9989 vs 0.8897 on the same token)
@@ -124,10 +128,14 @@ export function parseDexPool(raw: unknown): DexPool | null {
 
   const buysM5 = m5 ? readMetric(m5.buys, { integer: true, max: MAX_COUNT }) : MISSING;
   const sellsM5 = m5 ? readMetric(m5.sells, { integer: true, max: MAX_COUNT }) : MISSING;
-  let volumeM5 = volume ? readMetric(volume.m5, { max: MAX_USD }) : MISSING;
-  // Verified provider behaviour: an idle pool omits volume.m5 but reports
-  // zero buys and zero sells. Only in that exact case is the volume a true 0.
-  if (volumeM5.state === "missing" && volume && value(buysM5) === 0 && value(sellsM5) === 0) volumeM5 = okMetric(0);
+  // Verified provider behaviour (see the header): a window that rounds to
+  // $0.00 is omitted from `volume`. With the `volume` object present, an
+  // absent window is therefore a true zero. Without the object, it is unknown.
+  const window = (key: string): Metric => {
+    if (!volume) return MISSING;
+    return volume[key] === undefined ? okMetric(0) : readMetric(volume[key], { max: MAX_USD });
+  };
+  const volumeM5 = window("m5");
 
   const h1Buys = h1 ? readMetric(h1.buys, { integer: true, max: MAX_COUNT }) : MISSING;
   const h1Sells = h1 ? readMetric(h1.sells, { integer: true, max: MAX_COUNT }) : MISSING;
@@ -157,8 +165,8 @@ export function parseDexPool(raw: unknown): DexPool | null {
     marketCapUsd: readMetric(raw.marketCap, { max: MAX_USD }),
     fdvUsd: readMetric(raw.fdv, { max: MAX_USD }),
     volumeM5,
-    volumeH1: volume ? readMetric(volume.h1, { max: MAX_USD }) : MISSING,
-    volumeH24: volume ? readMetric(volume.h24, { max: MAX_USD }) : MISSING,
+    volumeH1: window("h1"),
+    volumeH24: window("h24"),
     buysM5,
     sellsM5,
     tradesH1,
@@ -250,7 +258,8 @@ function sumMetric(pools: readonly DexPool[], pick: (p: DexPool) => Metric): Met
     if (m.state !== "ok") return MISSING;
     total += m.value;
   }
-  return okMetric(total);
+  // Sums of cent-rounded figures: round away binary floating-point residue.
+  return okMetric(Math.round(total * 100) / 100);
 }
 
 function sumOrNull(pools: readonly DexPool[], pick: (p: DexPool) => Metric): number | null {

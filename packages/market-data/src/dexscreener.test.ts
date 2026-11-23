@@ -55,19 +55,25 @@ describe("DexScreener: parsing real responses", () => {
     assert.ok(first.imageUrl?.startsWith("https://cdn.dexscreener.com/"));
   });
 
-  it("treats an absent volume.m5 as zero only when the pool reports zero trades", () => {
+  it("reads an omitted volume window as zero, and a missing volume object as unknown", () => {
     const idle = pools()[1];
     assert.ok(idle);
     assert.deepEqual(idle.volumeM5, { state: "ok", value: 0 });
+    assert.deepEqual(idle.volumeH1, { state: "ok", value: 0 });
+    assert.equal(metricValue(idle.volumeH24), 149.2);
     assert.equal(idle.priceChange.h24, null);
 
-    // Trades happened but the volume figure is absent: that is unknown, not zero.
-    const odd = parseDexPool(clone(1, { txns: { m5: { buys: 3, sells: 1 } } }));
-    assert.deepEqual(odd?.volumeM5, { state: "missing" });
-    // No txns block at all: unknown as well.
-    const bare = parseDexPool(clone(1, { txns: undefined }));
+    // Dust trades: the provider omits a figure that rounds to $0.00.
+    const dust = parseDexPool(clone(1, { txns: { m5: { buys: 1, sells: 0 } } }));
+    assert.deepEqual(dust?.volumeM5, { state: "ok", value: 0 });
+    // No volume object at all: that is unknown, not zero.
+    const bare = parseDexPool(clone(1, { volume: undefined, txns: undefined }));
     assert.deepEqual(bare?.volumeM5, { state: "missing" });
+    assert.deepEqual(bare?.volumeH24, { state: "missing" });
     assert.deepEqual(bare?.buysM5, { state: "missing" });
+    // A present but invalid figure is an error, never a zero.
+    assert.equal(parseDexPool(clone(0, { volume: { m5: "12" } }))?.volumeM5.state, "error");
+    assert.equal(parseDexPool(clone(0, { volume: { m5: -1 } }))?.volumeM5.state, "error");
   });
 
   it("rejects pools it cannot identify and flags bad numbers without coercing them", () => {
@@ -141,7 +147,7 @@ describe("DexScreener: token-level aggregation", () => {
     const result = aggregatePools(TRUMP_MINT, [P1, P2, P3, P4], pools(), NOW);
     assert.ok(result.ok);
     const m = result.snapshot.metrics;
-    assert.equal(metricValue(m.volumeUsd), 8252.35 + 0 + 823.87 + 1340.05);
+    assert.equal(metricValue(m.volumeUsd), 10416.27);
     assert.equal(metricValue(m.buyCount), 17 + 0 + 23 + 21);
     assert.equal(metricValue(m.sellCount), 7 + 0 + 8 + 8);
     assert.equal(metricValue(m.tradeCount), 84);
@@ -195,7 +201,7 @@ describe("DexScreener: token-level aggregation", () => {
   });
 
   it("makes a sum unknown when one pool's figure is unknown, and keeps errors visible", () => {
-    const withUnknown = [...pools().slice(1), parseDexPool(clone(0, { txns: { m5: { buys: 4, sells: 2 } }, volume: { h24: 5 } }))];
+    const withUnknown = [...pools().slice(1), parseDexPool(clone(0, { txns: { m5: { buys: 4, sells: 2 } }, volume: undefined }))];
     const a = aggregatePools(TRUMP_MINT, [P1, P2], withUnknown.filter((p): p is DexPool => p !== null), NOW);
     assert.ok(a.ok);
     assert.deepEqual(a.snapshot.metrics.volumeUsd, { state: "missing" });
